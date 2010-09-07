@@ -1,0 +1,3 @@
+class Conversion < MyMongoBase
+  
+end

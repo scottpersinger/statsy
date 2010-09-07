@@ -1,0 +1,157 @@
+===== Data Model ========
+
+User
+  - record of a user account
+Domain
+  - record of one root domain to be tracked
+  - many: pages
+Page
+  - description of a tracked page in a domain
+Conversion
+  - Defines a conversion
+Visit
+  - record of one visit by one visitor on a given day. Records
+  the landing page and referral. There could be multiple visits
+  by the same visitor on the same day.
+Pageviews
+  - aggregates page views/visits to a page on a given day. So there
+  is 1 record per Page per day.
+Conversion
+  - records details of a single conversion from a given day.
+
+
+Example
+-------
+Suppose we have site, example.com. It has 4 pages:
+  / (home page)
+  /products (product listing page)
+  /purchase (purchase page with form)
+  /confirm (purchase confirmation page)
+
+And suppose we get 3 visits from 2 visitors to this site on 2010-01-01,
+and one conversion (purchase).
+
+Then we have this data:
+
+CONFIG
+
+domains [
+  {:domain => 'example.com', :user_id => }
+]
+
+pages [
+  {:domain_id => , :path => "/', :pattern => }
+  {:domain_id => , :path => "/products', :pattern => }
+  {:domain_id => , :path => "/purchase', :pattern => }
+  {:domain_id => , :path => "/confirm', :pattern => }
+
+conversions [
+  {:domain_id => , :page_id => , :name => "purchase"}
+
+AFTER COLLECTION
+
+domains [
+  {:domain => 'example.com', :visitor_count => 2}
+]
+
+visits [
+  {:day => 20100101,
+  :time => time,
+  :landing_page => /,
+  :prior_visit_id => ,
+  :referral, :source},
+
+  {:day => 20100101,
+  :time => time,
+  :landing_page => /,
+  :prior_visit_id => (points to previous visit),
+  :referral, :source},
+
+  {:day => 20100101,
+  :time => time,
+  :landing_page => /products,
+  :prior_visit_id => ,
+  :referral, :source}
+]
+
+pageviews [
+  {:day => 20100101,
+  :page => /,
+  :views => 2,
+  :visits => 1},
+
+  {:day => 20100101,
+  :page => /products,
+  :views => 3,
+  :visits => 2,
+  :exits => 1,
+  :time_on_page => 35,
+
+  :referrals => [
+    / => 2
+  ]},
+
+  {:day => '2010101',
+  :page => /purchase,
+  :views => 2,
+  :visits => 2,
+  :exits => 1,
+  :referrals => [
+    /product => 2
+  ],
+
+  {:day => 20100101,
+  :page => /confirm,
+  :views => 1,
+  :visits => 1,
+  :exits => 1,
+  :referrals => [
+    /purchase => 1
+  ]}
+]
+
+conversions [
+  {:day => 20100101,
+  :conversion_id => ,
+  :page_id => ,
+  :time => time,
+  :time_to_convert => time - visit time
+  :visit_id =>}
+]
+
+
+Landing page
+------------
+If the referrer is not from this domain, we consider the pageview a "landing".
+If the user has no "last page" cookie (good for 30 mins), then we generate
+a Visit (and a Pageview). Then we set a "last page" cookie to the current page,
+good for 30 minutes.
+
+Internal page view
+------------------
+If the referrer is from this domain, then we generate a Pageview. We lookup
+the previous page based on the referrer, and do a few things:
+  -Increment exits for the current page
+  -Decrement exits for the referring page.
+  -Increment the views number for the current page.
+  -Add the referrer to "referrals" for the current page, and increment the total.
+  -The client calculates time_on_page for the referring page, and we record that
+
+Calculations
+------------
+  Total visits per day: count of visits_days for day =
+  Total pageviews: sum(views) over pageviews_days for day =
+  Top pages:
+    pageviews_days ranked by visits where day =
+  Conversions:
+    count of conversions_days grouped by conversion_id
+
+  Funnel:
+    For a conversion:
+      for each page tagged for a conversion:
+        conversion rate = conversions / page visits
+        backtrack by referrals to page, divide page visits / referral page visits
+
+
+
+
