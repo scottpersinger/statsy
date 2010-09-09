@@ -13,8 +13,10 @@ gem 'sqlite3-ruby', :require => 'sqlite3'
 # Deploy with Capistrano
 # gem 'capistrano'
 
+group :development do
 # To use debugger
-# gem 'ruby-debug'
+  gem 'ruby-debug19'
+end
 
 # Bundle the extra gems:
 # gem 'bj'
@@ -22,6 +24,7 @@ gem 'sqlite3-ruby', :require => 'sqlite3'
 # gem 'sqlite3-ruby', :require => 'sqlite3'
 # gem 'aws-s3', :require => 'aws/s3'
 
+gem 'addressable'
 gem 'mongo'
 gem 'bson_ext'
 

@@ -6,7 +6,8 @@ Domain
   - record of one root domain to be tracked
   - many: pages
 Page
-  - description of a tracked page in a domain
+  - description of a tracked page in a domain. Internal record of Domain, not
+  stored separately.
 Conversion
   - Defines a conversion
 Visit
@@ -18,7 +19,16 @@ Pageviews
   is 1 record per Page per day.
 Conversion
   - records details of a single conversion from a given day.
-
+Visitors
+  - summary records of visitors to a domain. Visitors records are keyed
+  by :domain and a time specifier, one of:
+    :day => calendar day integer
+    :week => calendar day integer for the last day of a 7 day period
+    :month => calenday month integer (eg. 201009)
+  and each record holds a :count field with the total count for that period.
+  Visitors in a period are tracked by looking at the last_visit time from
+  the visitor. If it is nil, or pre-dates the interval, then the count is
+  incremented.
 
 Example
 -------
@@ -36,14 +46,15 @@ Then we have this data:
 CONFIG
 
 domains [
-  {:domain => 'example.com', :user_id => }
+  {:domain => 'example.com', :user_id => ,
+    pages [
+      {:pattern => , :id => }
+      {:pattern => , :id => }
+      {:pattern => , :id => }
+      {:pattern => , :id => }
+  }
 ]
 
-pages [
-  {:domain_id => , :path => "/', :pattern => }
-  {:domain_id => , :path => "/products', :pattern => }
-  {:domain_id => , :path => "/purchase', :pattern => }
-  {:domain_id => , :path => "/confirm', :pattern => }
 
 conversions [
   {:domain_id => , :page_id => , :name => "purchase"}
@@ -51,24 +62,33 @@ conversions [
 AFTER COLLECTION
 
 domains [
-  {:domain => 'example.com', :visitor_count => 2}
+  {:domain => 'example.com'}
+]
+
+visitors [
+  {:domain_id => , :day => 20100101, :count => 2}
+  {:domain_id => , :week => 20100101, :count => 2}
+  {:domain_id => , :month => 201001, :count => 2}
 ]
 
 visits [
   {:day => 20100101,
   :time => time,
   :landing_page => /,
+  :visitor => (visitor_id),
   :prior_visit_id => ,
   :referral, :source},
 
   {:day => 20100101,
   :time => time,
+  :visitor => (visitor_id),
   :landing_page => /,
   :prior_visit_id => (points to previous visit),
   :referral, :source},
 
   {:day => 20100101,
   :time => time,
+  :visitor => (visitor_id),
   :landing_page => /products,
   :prior_visit_id => ,
   :referral, :source}
@@ -120,16 +140,20 @@ conversions [
 ]
 
 
-Landing page
-------------
+Landing page - Visits
+---------------------
 If the referrer is not from this domain, we consider the pageview a "landing".
 If the user has no "last page" cookie (good for 30 mins), then we generate
 a Visit (and a Pageview). Then we set a "last page" cookie to the current page,
 good for 30 minutes.
 
+When we generate the Visit, we determine if there is any existing visit for this
+visitor for this day. If not, then we increment Domain.visitor_count for this day.
+
 Internal page view
 ------------------
-If the referrer is from this domain, then we generate a Pageview. We lookup
+We always update Pageviews for the indicated page. If the referrer is internal,
+then we lookup
 the previous page based on the referrer, and do a few things:
   -Increment exits for the current page
   -Decrement exits for the referring page.
@@ -139,6 +163,7 @@ the previous page based on the referrer, and do a few things:
 
 Calculations
 ------------
+  Total people per day:
   Total visits per day: count of visits_days for day =
   Total pageviews: sum(views) over pageviews_days for day =
   Top pages:
